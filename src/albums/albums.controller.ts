@@ -28,7 +28,7 @@ export class AlbumsController {
   ) {}
 
   @Get()
-  async getAll(@Query('artist') artistID: string) {
+  async getAll(@Query('artistId') artistID: string) {
     if (artistID) {
       const artistExist = await this.artistModel.findById({ _id: artistID });
       const artistAlbums = await this.albumModel.find({ artist: artistID });
