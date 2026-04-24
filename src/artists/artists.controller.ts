@@ -1,5 +1,6 @@
 import 'multer';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -31,36 +32,41 @@ export class ArtistsController {
 
   @Get(':id')
   async getOne(@Param('id') id: string) {
+    const existArtist = await this.artistModel.exists({ _id: id });
+    if (!existArtist) {
+      throw new NotFoundException('Artist not found!');
+    }
     try {
-      const existArtist = await this.artistModel.exists({ _id: id });
-
-      if (!existArtist) {
-        throw new Error();
-      }
-
       return this.artistModel.findById(id);
     } catch (error) {
       console.error(error);
-      throw new NotFoundException('Artist not found!');
     }
   }
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('image', { dest: './public/uploads/products' }),
+    FileInterceptor('image', { dest: './public/uploads/artists' }),
   )
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() artistData: CreateArtistDTO,
   ) {
-    try {
-      const newArtist = new this.artistModel({
-        name: artistData.name,
-        image: file ? '/uploads/products/' + `${file.filename}` : null,
-        description: artistData.description,
-        isPublished: artistData.isPublished,
-      });
+    const newArtist = new this.artistModel({
+      name: artistData.name,
+      image: file ? '/uploads/artists/' + `${file.filename}` : null,
+      description: artistData.description,
+      isPublished: artistData.isPublished,
+    });
 
+    const artistExist = await this.artistModel.exists({
+      name: newArtist.name,
+    });
+
+    if (artistExist) {
+      throw new BadRequestException('Artist already exist');
+    }
+
+    try {
       return newArtist.save();
     } catch (error) {
       if (error instanceof Error) {
@@ -73,17 +79,18 @@ export class ArtistsController {
 
   @Delete(':id')
   async delete(@Param('id') id: string) {
+    const deleteArtist = await this.artistModel.findByIdAndDelete({
+      _id: id,
+    });
+
+    if (!deleteArtist) {
+      throw new NotFoundException('Artist not found!');
+    }
+
     try {
-      const existArtist = await this.artistModel.exists({ _id: id });
-
-      if (!existArtist) {
-        throw new Error();
-      }
-
       return { message: 'Artist Deleted!' };
     } catch (error) {
       console.error(error);
-      throw new NotFoundException('Artist not found!');
     }
   }
 }
